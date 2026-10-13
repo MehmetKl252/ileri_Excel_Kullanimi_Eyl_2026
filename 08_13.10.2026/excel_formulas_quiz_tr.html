@@ -1,0 +1,347 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.quiz-wrap { padding: 1.5rem 0; max-width: 640px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+.score-badge { background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 6px 14px; font-size: 13px; color: var(--color-text-secondary); }
+.score-badge span { font-weight: 500; color: var(--color-text-primary); }
+.q-counter { font-size: 13px; color: var(--color-text-secondary); }
+.progress-bar-bg { height: 4px; background: var(--color-background-secondary); border-radius: 2px; margin-bottom: 1.5rem; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 2px; background: #1D9E75; transition: width 0.4s ease; }
+.question-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.5rem; margin-bottom: 1rem; }
+.q-category { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; color: #1D9E75; text-transform: uppercase; margin-bottom: 0.5rem; }
+.q-text { font-size: 15px; color: var(--color-text-primary); line-height: 1.6; margin-bottom: 0.25rem; }
+.q-code { font-family: var(--font-mono); font-size: 13px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 14px; margin: 0.75rem 0; color: var(--color-text-primary); }
+.options { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+.opt-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 12px 14px; cursor: pointer; transition: all 0.15s ease; font-size: 14px; color: var(--color-text-primary); font-family: var(--font-mono); }
+.opt-btn:hover:not(:disabled) { background: var(--color-background-secondary); border-color: #1D9E75; }
+.opt-letter { width: 24px; height: 24px; min-width: 24px; border-radius: 4px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); font-family: var(--font-sans); transition: all 0.15s; }
+.opt-btn.correct { background: #E1F5EE; border-color: #1D9E75; }
+.opt-btn.correct .opt-letter { background: #1D9E75; color: #fff; border-color: #1D9E75; }
+.opt-btn.wrong { background: #FCEBEB; border-color: #E24B4A; }
+.opt-btn.wrong .opt-letter { background: #E24B4A; color: #fff; border-color: #E24B4A; }
+.opt-btn:disabled { cursor: default; }
+.feedback { font-size: 13px; font-family: var(--font-sans); padding: 10px 14px; border-radius: var(--border-radius-md); margin-top: 0.75rem; line-height: 1.6; display: none; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: #E1F5EE; color: #085041; border: 0.5px solid #5DCAA5; }
+.feedback.wrong-fb { background: #FCEBEB; color: #501313; border: 0.5px solid #F09595; }
+.next-btn { width: 100%; padding: 12px; border-radius: var(--border-radius-md); background: #1D9E75; color: #fff; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; display: none; font-family: var(--font-sans); }
+.next-btn:hover { opacity: 0.88; }
+.next-btn.show { display: block; }
+.result-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 2rem; text-align: center; display: none; }
+.result-card.show { display: block; }
+.result-score-ring { width: 100px; height: 100px; margin: 0 auto 1.25rem; position: relative; }
+.result-score-ring svg { transform: rotate(-90deg); }
+.result-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.result-title { font-size: 18px; font-weight: 500; margin-bottom: 0.5rem; color: var(--color-text-primary); }
+.result-sub { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+.stat-box { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 8px; }
+.stat-num { font-size: 20px; font-weight: 500; color: var(--color-text-primary); }
+.stat-label { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.restart-btn { padding: 11px 28px; border-radius: var(--border-radius-md); background: transparent; border: 0.5px solid var(--color-border-secondary); font-size: 14px; cursor: pointer; color: var(--color-text-primary); font-family: var(--font-sans); transition: background 0.15s; }
+.restart-btn:hover { background: var(--color-background-secondary); }
+</style>
+
+<div class="quiz-wrap">
+  <h2 class="sr-only">Excel Türkçe formülleri etkileşimli quiz — 20 soru</h2>
+  <div class="header">
+    <div class="score-badge">Puan: <span id="score-display">0</span> / <span id="total-display">20</span></div>
+    <div class="q-counter" id="q-counter">Soru 1 / 20</div>
+  </div>
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill" style="width:5%"></div></div>
+
+  <div id="question-area">
+    <div class="question-card" id="q-card">
+      <div class="q-category" id="q-cat"></div>
+      <div class="q-text" id="q-text"></div>
+      <div class="q-code" id="q-code" style="display:none"></div>
+      <div class="options" id="options-list"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <button class="next-btn" id="next-btn">Sonraki soru →</button>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div class="result-score-ring">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--color-background-secondary)" stroke-width="8"/>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#1D9E75" stroke-width="8"
+          stroke-dasharray="263.9" id="ring-fill" stroke-dashoffset="263.9" stroke-linecap="round"/>
+      </svg>
+      <div class="result-num" id="result-pct">0%</div>
+    </div>
+    <div class="result-title" id="result-title">Quiz tamamlandı!</div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num" id="stat-correct" style="color:#1D9E75">0</div><div class="stat-label">Doğru</div></div>
+      <div class="stat-box"><div class="stat-num" id="stat-wrong" style="color:#E24B4A">0</div><div class="stat-label">Yanlış</div></div>
+      <div class="stat-box"><div class="stat-num" id="stat-pct">0%</div><div class="stat-label">Başarı</div></div>
+    </div>
+    <button class="restart-btn" id="restart-btn">Tekrar başla</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    cat: "Temel Formüller",
+    text: "A1:A10 aralığındaki sayıları toplamak için hangi formül kullanılır?",
+    code: null,
+    opts: ["=TOPLA(A1:A10)", "=TOPLAM(A1:A10)", "=EKLE(A1:A10)", "=SUM(A1:A10)"],
+    ans: 0,
+    exp: "=TOPLA(A1:A10) doğrudur. Türkçe Excel'de İngilizce SUM yerine TOPLA kullanılır. TOPLAM veya EKLE geçerli fonksiyon değildir."
+  },
+  {
+    cat: "Temel Formüller",
+    text: "B1:B5 aralığının aritmetik ortalamasını hesaplayan formül hangisidir?",
+    code: null,
+    opts: ["=ORTALAMA(B1:B5)", "=ORT(B1:B5)", "=AVERAGE(B1:B5)", "=MEAN(B1:B5)"],
+    ans: 0,
+    exp: "Türkçe Excel'de ORTALAMA fonksiyonu kullanılır. ORT kısaltması veya MEAN geçerli değildir."
+  },
+  {
+    cat: "Koşullu Formüller",
+    text: "A1 değeri 50'den büyükse 'Geçti', değilse 'Kaldı' yazdıran formül hangisidir?",
+    code: null,
+    opts: ['=EĞER(A1>50;"Geçti";"Kaldı")', '=KOŞUL(A1>50;"Geçti";"Kaldı")', '=IF(A1>50;"Geçti";"Kaldı")', '=NE_ZAMAN(A1>50;"Geçti";"Kaldı")'],
+    ans: 0,
+    exp: "Türkçe Excel'de IF fonksiyonunun karşılığı EĞER'dir. Söz dizimi: =EĞER(koşul; doğruysa; yanlışsa). KOŞUL veya NE_ZAMAN geçerli değildir."
+  },
+  {
+    cat: "Arama Formülleri",
+    text: "Türkçe Excel'de dikey arama (VLOOKUP) fonksiyonunun adı nedir?",
+    code: "=_______(aranan; tablo; sütun_no; [eşleşme])",
+    opts: ["=YATAYARA(...)", "=DÜŞEYARA(...)", "=ARA(...)", "=BULSÜTUN(...)"],
+    ans: 1,
+    exp: "DÜŞEYARA, İngilizce VLOOKUP'ın Türkçe karşılığıdır. Dikey (sütun bazlı) arama yapar. YATAYARA ise yatay arama (HLOOKUP) için kullanılır."
+  },
+  {
+    cat: "Sayma Formülleri",
+    text: "C1:C20 aralığında yalnızca 'Evet' yazan hücreleri saymak için hangi formül kullanılır?",
+    code: null,
+    opts: ['=SAY(C1:C20;"Evet")', '=EĞERSAY(C1:C20;"Evet")', '=ETOPLA(C1:C20;"Evet")', '=DOLU(C1:C20;"Evet")'],
+    ans: 1,
+    exp: "EĞERSAY (İngilizce: COUNTIF) belirli bir koşulu sağlayan hücre sayısını döndürür. SAY yalnızca sayısal değerleri sayar; ETOPLA ise toplama yapar."
+  },
+  {
+    cat: "Metin Formülleri",
+    text: "A1 hücresindeki metni B1 ile birleştirip araya tire (-) koymak için hangi formül doğrudur?",
+    code: null,
+    opts: ['=A1&"-"&B1', '=BİRLEŞTİR(A1;"-";B1)', '=EKLE(A1;"-";B1)', 'A ve B şıkları doğrudur'],
+    ans: 3,
+    exp: "Hem & operatörü hem de BİRLEŞTİR (İngilizce: CONCATENATE) metin birleştirme için kullanılabilir. Her iki yöntem de geçerlidir."
+  },
+  {
+    cat: "Metin Formülleri",
+    text: "A1 hücresindeki metnin kaç karakter uzunluğunda olduğunu veren formül hangisidir?",
+    code: null,
+    opts: ["=UZUNLUK(A1)", "=KARAKTERSAYı(A1)", "=BOY(A1)", "=ADET(A1)"],
+    ans: 0,
+    exp: "UZUNLUK (İngilizce: LEN) metnin karakter sayısını döndürür. KARAKTERSAYı, BOY veya ADET geçerli Excel fonksiyonu değildir."
+  },
+  {
+    cat: "Metin Formülleri",
+    text: "Aşağıdaki formülün sonucu nedir?",
+    code: '=SOL("Microsoft Excel"; 9)',
+    opts: ["Microsoft", "Microsof", "Microsoft ", "MicrosoftE"],
+    ans: 0,
+    exp: 'SOL (İngilizce: LEFT) metnin solundan belirtilen kadar karakter alır. "Microsoft Excel" metninin ilk 9 karakteri = "Microsoft" (M-i-c-r-o-s-o-f-t).'
+  },
+  {
+    cat: "Metin Formülleri",
+    text: "Aşağıdaki formülün sonucu nedir?",
+    code: '=PARÇA("ABCDEFGH"; 3; 4)',
+    opts: ["ABCD", "BCDE", "CDEF", "DEFG"],
+    ans: 2,
+    exp: 'PARÇA (İngilizce: MID) → 3. karakterden başlayıp 4 karakter alır. A=1, B=2, C=3 → C, D, E, F = "CDEF".'
+  },
+  {
+    cat: "Koşullu Formüller",
+    text: "A1:A10 aralığında B1'den büyük olan hücrelerin toplamını veren formül hangisidir?",
+    code: null,
+    opts: ['=EĞERSAY(A1:A10;">"&B1)', '=ETOPLA(A1:A10;">"&B1)', '=TOPLA.ÇARP(A1:A10;B1)', '=TOPLA(EĞER(A1:A10>B1;A1:A10))'],
+    ans: 1,
+    exp: "ETOPLA (İngilizce: SUMIF) belirli koşulu sağlayan hücreleri toplar. Söz dizimi: =ETOPLA(aralık; kriter; [toplam_aralığı]). Kriter ve toplam aralığı aynıysa 3. argüman yazılmaz."
+  },
+  {
+    cat: "Hata İşleme",
+    text: "Bir formül hata döndürdüğünde yerine 0 yazmak için hangi fonksiyon kullanılır?",
+    code: "=_______(A1/B1; 0)",
+    opts: ["=BOŞSA(A1/B1; 0)", "=HATAISA(A1/B1; 0)", "=EĞERHATA(A1/B1; 0)", "=EĞERYOKSA(A1/B1; 0)"],
+    ans: 2,
+    exp: "EĞERHATA (İngilizce: IFERROR) herhangi bir hata türünde ikinci argümanı döndürür. EĞERYOKSA yalnızca #YOK (#N/A) hatasını yakalar."
+  },
+  {
+    cat: "Arama Formülleri",
+    text: "Türkçe Excel'de INDEX/MATCH kombinasyonunun karşılığı olan fonksiyon çifti hangisidir?",
+    code: null,
+    opts: ["=ARA() / BUL()", "=İNDİS() / KAÇINCI()", "=DÜŞEYARA() / YATAYARA()", "=SATIR() / SÜTUN()"],
+    ans: 1,
+    exp: "İNDİS (İngilizce: INDEX) bir diziden değer döndürür; KAÇINCI (İngilizce: MATCH) ise değerin aralıktaki konumunu (sıra numarasını) bulur. İkisi birlikte güçlü bir arama kombinasyonu oluşturur."
+  },
+  {
+    cat: "Tarih Formülleri",
+    text: "Bugünün tarihini (saat bilgisi olmadan) döndüren Türkçe Excel fonksiyonu hangisidir?",
+    code: null,
+    opts: ["=ŞİMDİ()", "=BUGÜN()", "=TARİH()", "=GÜNCEL()"],
+    ans: 1,
+    exp: "BUGÜN() (İngilizce: TODAY()) yalnızca tarih bilgisini döndürür. ŞİMDİ() tarih ve saati birlikte döndürür. TARİH() belirli bir tarih oluşturmak için kullanılır."
+  },
+  {
+    cat: "Matematiksel",
+    text: "3.14159 sayısını 2 ondalık basamağa yuvarlayan formül hangisidir?",
+    code: null,
+    opts: ["=TAMSAYI(3,14159; 2)", "=KISALT(3,14159; 2)", "=YUVARLA(3,14159; 2)", "=AŞAĞIYUVARLA(3,14159; 2)"],
+    ans: 2,
+    exp: "YUVARLA (İngilizce: ROUND) sayıyı en yakın değere yuvarlar. KISALT ondalık kısmı keser (yuvarlamaz). TAMSAYI her zaman aşağıya tam sayıya yuvarlar."
+  },
+  {
+    cat: "Metin Formülleri",
+    text: "Bir metindeki baştaki, sondaki ve fazladan ortadaki boşlukları temizleyen formül hangisidir?",
+    code: null,
+    opts: ["=TEMİZ(A1)", "=KIRP(A1)", "=SİL(A1)", "=BOŞLUKSIL(A1)"],
+    ans: 1,
+    exp: "KIRP (İngilizce: TRIM) metnin başındaki, sonundaki ve kelimeler arasındaki fazla boşlukları kaldırır; kelimeler arasında tek boşluk bırakır. TEMİZ ise yazdırılamayan karakterleri siler."
+  },
+  {
+    cat: "İstatistiksel",
+    text: "A1:A100 aralığındaki en büyük 3. değeri döndüren formül hangisidir?",
+    code: null,
+    opts: ["=MAK(A1:A100; 3)", "=BÜYÜK(A1:A100; 3)", "=SIRALAMA(A1:A100; 3)", "=KÜÇÜK(A1:A100; 3)"],
+    ans: 1,
+    exp: "BÜYÜK (İngilizce: LARGE) aralıktaki k'ncı en büyük değeri döndürür. BÜYÜK(A1:A100; 1) = MAK ile aynı sonucu verir. KÜÇÜK ise k'ncı en küçük değeri verir."
+  },
+  {
+    cat: "Sayma Formülleri",
+    text: "A1:A50 aralığında boş olmayan tüm hücreleri (metin + sayı dahil) sayan formül hangisidir?",
+    code: null,
+    opts: ["=SAY(A1:A50)", "=BOŞLUKSAY(A1:A50)", "=DOLU(A1:A50)", "=EĞERSAY(A1:A50;\"<>\"\"\")"],
+    ans: 2,
+    exp: "DOLU (İngilizce: COUNTA) metin, sayı ve hata dahil tüm dolu hücreleri sayar. SAY yalnızca sayısal değerleri sayar. BOŞLUKSAY boş hücreleri sayar."
+  },
+  {
+    cat: "İleri Formüller",
+    text: "Aşağıdaki TOPLA.ÇARP formülü ne hesaplar?",
+    code: "=TOPLA.ÇARP(B2:B10; C2:C10)",
+    opts: ["B2:B10 ile C2:C10 toplamlarını ayrı ayrı toplar", "Her satırda B×C çarpımını hesaplayıp tüm çarpımları toplar", "B ve C aralığının koşullu ortalamasını alır", "Yalnızca eşit değerleri sayar"],
+    ans: 1,
+    exp: "TOPLA.ÇARP (İngilizce: SUMPRODUCT) karşılıklı hücreleri çarpar (B2×C2, B3×C3...) ve tüm çarpımların toplamını döndürür. Satır bazlı ağırlıklı hesaplamalar için çok kullanışlıdır."
+  },
+  {
+    cat: "Arama Formülleri",
+    text: "Aşağıdaki DÜŞEYARA formülünde hangi sütundan değer döndürülür?",
+    code: "=DÜŞEYARA(D1; A1:C100; 2; YANLIŞ)",
+    opts: ["A sütunu", "B sütunu", "C sütunu", "D sütunu"],
+    ans: 1,
+    exp: "3. argüman olan 2, tablo dizisinin (A1:C100) 2. sütununu gösterir. A=1, B=2, C=3 olduğuna göre B sütunundan değer döner. YANLIŞ = tam eşleşme anlamına gelir."
+  },
+  {
+    cat: "Metin Formülleri",
+    text: "A1 = 42500 iken aşağıdaki formülün sonucu nedir?",
+    code: '=METNEÇEVİR(A1; "#.##0")',
+    opts: ["42500", "42.500", "42,500", "42500.00"],
+    ans: 1,
+    exp: 'METNEÇEVİR (İngilizce: TEXT) sayıyı belirtilen formatta metin olarak döndürür. "#.##0" biçimi binlik ayraç olarak nokta kullanır → sonuç "42.500" olur.'
+  }
+];
+
+let current = 0, score = 0, answered = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const shuffledQs = shuffle(questions);
+
+function loadQuestion(idx) {
+  const q = shuffledQs[idx];
+  answered = false;
+  document.getElementById('q-counter').textContent = `Soru ${idx + 1} / 20`;
+  document.getElementById('progress-fill').style.width = `${((idx) / 20) * 100 + 5}%`;
+  document.getElementById('q-cat').textContent = q.cat;
+  document.getElementById('q-text').textContent = q.text;
+  const codeEl = document.getElementById('q-code');
+  if (q.code) { codeEl.textContent = q.code; codeEl.style.display = 'block'; }
+  else { codeEl.style.display = 'none'; }
+  const optsList = document.getElementById('options-list');
+  optsList.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="opt-letter">${['A','B','C','D'][i]}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i, btn);
+    optsList.appendChild(btn);
+  });
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('next-btn').className = 'next-btn';
+}
+
+function selectAnswer(chosen, btn) {
+  if (answered) return;
+  answered = true;
+  const q = shuffledQs[current];
+  const allBtns = document.querySelectorAll('.opt-btn');
+  allBtns.forEach(b => b.disabled = true);
+  const fb = document.getElementById('feedback');
+  if (chosen === q.ans) {
+    score++;
+    document.getElementById('score-display').textContent = score;
+    btn.classList.add('correct');
+    fb.className = 'feedback correct-fb show';
+    fb.textContent = '✓ Doğru! ' + q.exp;
+  } else {
+    btn.classList.add('wrong');
+    allBtns[q.ans].classList.add('correct');
+    fb.className = 'feedback wrong-fb show';
+    fb.textContent = '✗ Yanlış. ' + q.exp;
+  }
+  document.getElementById('next-btn').className = 'next-btn show';
+}
+
+document.getElementById('next-btn').onclick = () => {
+  current++;
+  if (current < 20) { loadQuestion(current); }
+  else { showResult(); }
+};
+
+function showResult() {
+  document.getElementById('question-area').style.display = 'none';
+  document.getElementById('next-btn').style.display = 'none';
+  const pct = Math.round((score / 20) * 100);
+  const rc = document.getElementById('result-card');
+  rc.classList.add('show');
+  document.getElementById('result-pct').textContent = pct + '%';
+  document.getElementById('stat-correct').textContent = score;
+  document.getElementById('stat-wrong').textContent = 20 - score;
+  document.getElementById('stat-pct').textContent = pct + '%';
+  const ring = document.getElementById('ring-fill');
+  ring.style.strokeDashoffset = 263.9 - (pct / 100) * 263.9;
+  let title, sub;
+  if (pct >= 90) { title = 'Excel uzmanısınız!'; sub = 'Harika! Türkçe formüllere hâkimiyetiniz çok güçlü.'; }
+  else if (pct >= 70) { title = 'Çok iyi!'; sub = 'Excel bilginiz kapsamlı, birkaç fonksiyon üzerinde çalışabilirsiniz.'; }
+  else if (pct >= 50) { title = 'İyi bir başlangıç!'; sub = 'Temel formülleri biliyorsunuz, Türkçe karşılıklarını pekiştirmeniz faydalı olur.'; }
+  else { title = 'Pratik yapma zamanı!'; sub = 'Endişelenmeyin — Türkçe Excel formüllerini tekrar çalışarak hızla gelişebilirsiniz.'; }
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent = sub;
+}
+
+document.getElementById('restart-btn').onclick = () => {
+  current = 0; score = 0;
+  document.getElementById('score-display').textContent = 0;
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('question-area').style.display = 'block';
+  const newShuffled = shuffle(questions);
+  newShuffled.forEach((q, i) => shuffledQs[i] = q);
+  loadQuestion(0);
+};
+
+loadQuestion(0);
+</script>
